@@ -16,7 +16,8 @@ const fetcher = (variables, token) => {
           # fetch only owner repos & not forks
           repositories(ownerAffiliations: OWNER, isFork: false, first: 100) {
             nodes {
-              name
+              name,
+              isPrivate,
               languages(first: 10, orderBy: {field: SIZE, direction: DESC}) {
                 edges {
                   size
@@ -44,7 +45,7 @@ const fetcher = (variables, token) => {
  * @param {string[]} exclude_repo
  * @returns {Promise<import("./types").TopLangData>}
  */
-async function fetchTopLanguages(username, exclude_repo = []) {
+async function fetchTopLanguages(username, count_private = false, exclude_repo = []) {
   if (!username) throw new MissingParamError(["username"]);
 
   const res = await retryer(fetcher, { login: username });
@@ -69,6 +70,11 @@ async function fetchTopLanguages(username, exclude_repo = []) {
   repoNodes = repoNodes
     .sort((a, b) => b.size - a.size)
     .filter((name) => !repoToHide[name.name]);
+  
+  // filter out private repositories if needed
+  if (!count_private) {
+    repoNodes = repoNodes.filter(repo => !repo.isPrivate);
+  }
 
   repoNodes = repoNodes
     .filter((node) => node.languages.edges.length > 0)
