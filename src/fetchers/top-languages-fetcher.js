@@ -1,12 +1,7 @@
-// @ts-check
-const { request, logger, MissingParamError } = require("../common/utils");
+const { request, logger } = require("../common/utils");
 const retryer = require("../common/retryer");
 require("dotenv").config();
 
-/**
- * @param {import('Axios').AxiosRequestHeaders} variables
- * @param {string} token
- */
 const fetcher = (variables, token) => {
   return request(
     {
@@ -35,18 +30,17 @@ const fetcher = (variables, token) => {
       variables,
     },
     {
-      Authorization: `token ${token}`,
+      Authorization: `bearer ${token}`,
     },
   );
 };
 
-/**
- * @param {string} username
- * @param {string[]} exclude_repo
- * @returns {Promise<import("./types").TopLangData>}
- */
-async function fetchTopLanguages(username, count_private = false, exclude_repo = []) {
-  if (!username) throw new MissingParamError(["username"]);
+async function fetchTopLanguages(
+  username,
+  count_private = false,
+  exclude_repo = [],
+) {
+  if (!username) throw Error("Invalid username");
 
   const res = await retryer(fetcher, { login: username });
 
@@ -69,15 +63,19 @@ async function fetchTopLanguages(username, count_private = false, exclude_repo =
   // filter out repositories to be hidden
   repoNodes = repoNodes
     .sort((a, b) => b.size - a.size)
-    .filter((name) => !repoToHide[name.name]);
-  
+    .filter((name) => {
+      return !repoToHide[name.name];
+    });
+
   // filter out private repositories if needed
   if (!count_private) {
     repoNodes = repoNodes.filter(repo => !repo.isPrivate);
   }
 
   repoNodes = repoNodes
-    .filter((node) => node.languages.edges.length > 0)
+    .filter((node) => {
+      return node.languages.edges.length > 0;
+    })
     // flatten the list of language nodes
     .reduce((acc, curr) => curr.languages.edges.concat(acc), [])
     .reduce((acc, prev) => {
